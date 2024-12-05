@@ -17,4 +17,4 @@ export function SubredditCard({ name, description }: SubredditCardProps) {
       </Card>
     </Link>
   );
-} 
+}
