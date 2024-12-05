@@ -11,9 +11,26 @@ interface SubredditPageProps {
   };
 }
 
+async function getAnalyzedPosts(subredditName: string) {
+  const posts = await getTopPosts(subredditName);
+  
+  if (posts.length === 0) {
+    return [];
+  }
+
+  const analyses = await analyzePostsConcurrently(
+    posts.map(post => ({ title: post.title, content: post.content }))
+  );
+
+  return posts.map((post, index) => ({
+    ...post,
+    analysis: analyses[index]
+  }));
+}
+
 async function PostsList({ subredditName }: { subredditName: string }) {
   try {
-    const posts = await getTopPosts(subredditName);
+    const posts = await getAnalyzedPosts(subredditName);
 
     if (posts.length === 0) {
       return (
@@ -25,9 +42,10 @@ async function PostsList({ subredditName }: { subredditName: string }) {
 
     return <PostsTable posts={posts} />;
   } catch (error) {
+    console.error('Error loading posts:', error);
     return (
       <div className="text-center py-8 text-red-500">
-        <p>Error loading posts. Please check your Reddit API credentials.</p>
+        <p>Error loading posts. Please check your API credentials.</p>
       </div>
     );
   }
@@ -35,7 +53,7 @@ async function PostsList({ subredditName }: { subredditName: string }) {
 
 async function ThemesList({ subredditName }: { subredditName: string }) {
   try {
-    const posts = await getTopPosts(subredditName);
+    const posts = await getAnalyzedPosts(subredditName);
 
     if (posts.length === 0) {
       return (
@@ -45,16 +63,7 @@ async function ThemesList({ subredditName }: { subredditName: string }) {
       );
     }
 
-    const analyses = await analyzePostsConcurrently(
-      posts.map(post => ({ title: post.title, content: post.content }))
-    );
-
-    const postsWithAnalysis = posts.map((post, index) => ({
-      ...post,
-      analysis: analyses[index]
-    }));
-
-    return <ThemeAnalysis posts={postsWithAnalysis} />;
+    return <ThemeAnalysis posts={posts} />;
   } catch (error) {
     console.error('Error analyzing posts:', error);
     return (
@@ -74,7 +83,7 @@ export default function SubredditPage({ params }: SubredditPageProps) {
         postsContent={
           <Suspense fallback={
             <div className="text-center py-8">
-              <p>Loading posts...</p>
+              <p>Loading and analyzing posts...</p>
             </div>
           }>
             <PostsList subredditName={params.name} />

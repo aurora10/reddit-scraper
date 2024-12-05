@@ -9,13 +9,36 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { Badge } from "@/components/ui/badge"
 import { type RedditPost } from "@/lib/reddit"
+import { type PostCategory } from "@/lib/openai"
 
 type SortField = 'score' | 'created_utc' | 'num_comments'
 type SortDirection = 'asc' | 'desc'
 
 interface PostsTableProps {
   posts: RedditPost[]
+}
+
+function CategoryBadges({ analysis }: { analysis?: PostCategory }) {
+  if (!analysis) return null;
+
+  return (
+    <div className="flex gap-2 flex-wrap">
+      {analysis.isSolutionRequest && (
+        <Badge className="bg-blue-500">Solution</Badge>
+      )}
+      {analysis.isPainOrAnger && (
+        <Badge className="bg-red-500">Pain</Badge>
+      )}
+      {analysis.isAdviceRequest && (
+        <Badge className="bg-green-500">Advice</Badge>
+      )}
+      {analysis.isMoneyTalk && (
+        <Badge className="bg-yellow-500">Money</Badge>
+      )}
+    </div>
+  )
 }
 
 export function PostsTable({ posts }: PostsTableProps) {
@@ -62,17 +85,18 @@ export function PostsTable({ posts }: PostsTableProps) {
             >
               Comments {sortField === 'num_comments' && (sortDirection === 'asc' ? '↑' : '↓')}
             </TableHead>
+            <TableHead>Categories</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {sortedPosts.map((post) => (
             <TableRow key={post.id}>
-              <TableCell className="font-medium">
+              <TableCell className="max-w-md">
                 <a 
                   href={post.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="hover:text-blue-600"
+                  className="font-medium hover:text-blue-600 block"
                 >
                   {post.title}
                 </a>
@@ -102,6 +126,9 @@ export function PostsTable({ posts }: PostsTableProps) {
                 {new Date(post.created_utc * 1000).toLocaleString()}
               </TableCell>
               <TableCell>{post.num_comments}</TableCell>
+              <TableCell>
+                <CategoryBadges analysis={post.analysis} />
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
