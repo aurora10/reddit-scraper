@@ -2,21 +2,46 @@
 
 import { useState } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { RedditPost } from "@/lib/reddit"
-import { PostCategory } from "@/lib/openai"
 import { PostsTable } from "@/components/PostsTable"
+import type { Post, PostAnalysis } from "@/lib/db"
+
+interface PostWithAnalysis extends Post {
+  post_analyses?: PostAnalysis[]
+  analysis?: {
+    isSolutionRequest: boolean
+    isPainOrAnger: boolean
+    isAdviceRequest: boolean
+    isMoneyTalk: boolean
+  }
+}
 
 interface ThemeAnalysisProps {
-  posts: (RedditPost & { analysis: PostCategory })[]
+  posts: PostWithAnalysis[]
 }
 
 interface ThemeCardProps {
   title: string
   description: string
-  posts: (RedditPost & { analysis: PostCategory })[]
-  filterFn: (post: RedditPost & { analysis: PostCategory }) => boolean
+  posts: PostWithAnalysis[]
+  filterFn: (post: PostWithAnalysis) => boolean
   isSelected: boolean
   onClick: () => void
+}
+
+// Helper function to get analysis data regardless of source
+function getAnalysis(post: PostWithAnalysis) {
+  if (post.analysis) {
+    return post.analysis;
+  }
+  if (post.post_analyses?.[0]) {
+    return {
+      isSolutionRequest: post.post_analyses[0].is_solution_request,
+      isPainOrAnger: post.post_analyses[0].is_pain_or_anger,
+      isAdviceRequest: post.post_analyses[0].is_advice_request,
+      isMoneyTalk: post.post_analyses[0].is_money_talk
+    };
+  }
+  return null;
 }
 
 function ThemeCard({ title, description, posts, filterFn, isSelected, onClick }: ThemeCardProps) {
@@ -48,25 +73,37 @@ export function ThemeAnalysis({ posts }: ThemeAnalysisProps) {
       id: 'solution',
       title: 'Solution Requests',
       description: 'Posts seeking solutions to problems',
-      filterFn: (post: RedditPost & { analysis: PostCategory }) => post.analysis.isSolutionRequest
+      filterFn: (post: PostWithAnalysis) => {
+        const analysis = getAnalysis(post);
+        return analysis?.isSolutionRequest ?? false;
+      }
     },
     {
       id: 'pain',
       title: 'Pain & Anger',
       description: 'Posts expressing frustration or anger',
-      filterFn: (post: RedditPost & { analysis: PostCategory }) => post.analysis.isPainOrAnger
+      filterFn: (post: PostWithAnalysis) => {
+        const analysis = getAnalysis(post);
+        return analysis?.isPainOrAnger ?? false;
+      }
     },
     {
       id: 'advice',
       title: 'Advice Requests',
       description: 'Posts seeking advice',
-      filterFn: (post: RedditPost & { analysis: PostCategory }) => post.analysis.isAdviceRequest
+      filterFn: (post: PostWithAnalysis) => {
+        const analysis = getAnalysis(post);
+        return analysis?.isAdviceRequest ?? false;
+      }
     },
     {
       id: 'money',
       title: 'Money Talk',
       description: 'Posts discussing financial aspects',
-      filterFn: (post: RedditPost & { analysis: PostCategory }) => post.analysis.isMoneyTalk
+      filterFn: (post: PostWithAnalysis) => {
+        const analysis = getAnalysis(post);
+        return analysis?.isMoneyTalk ?? false;
+      }
     }
   ]
 

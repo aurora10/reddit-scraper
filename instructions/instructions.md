@@ -129,21 +129,30 @@ We will utilize the **snoowrap** library to interact with the Reddit API for fet
 │   └── page.tsx
 ├── components
 │   ├── AddSubredditModal.tsx
+│   ├── PostsTable.tsx
 │   ├── SubredditCard.tsx
+│   ├── SubredditTabs.tsx
+│   ├── ThemeAnalysis.tsx
 │   └── ui
+│       ├── badge.tsx
+│       ├── button.tsx
+│       ├── card.tsx
+│       ├── dialog.tsx
+│       ├── input.tsx
+│       ├── label.tsx
+│       ├── sheet.tsx
+│       ├── table.tsx
+│       └── tabs.tsx
 ├── components.json
 ├── instructions
+│   ├── database_instructions.md
 │   └── instructions.md
 ├── lib
-│   └── utils.ts
-├── next-env.d.ts
 ├── next.config.mjs
 ├── package-lock.json
 ├── package.json
 ├── postcss.config.mjs
-├── tailwind.config.ts
 └── tsconfig.json
-
 ```
 
 ### Reddit Data Fetching
@@ -151,8 +160,6 @@ We will utilize the **snoowrap** library to interact with the Reddit API for fet
 #### Using `snoowrap` Library
 
 ```javascript
-
-
 import Snoowrap from "snoowrap";
 
 const redditClient = new Snoowrap({
@@ -190,8 +197,6 @@ export async function fetchRecentPosts(subredditName) {
 #### Using OpenAI's `chat.completions.create`
 
 ```javascript
-
-
 import OpenAI from "openai";
 import { z } from "zod";
 

@@ -10,17 +10,34 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { type RedditPost } from "@/lib/reddit"
-import { type PostCategory } from "@/lib/openai"
+import type { Post, PostAnalysis } from "@/lib/db"
 
 type SortField = 'score' | 'created_utc' | 'num_comments'
 type SortDirection = 'asc' | 'desc'
 
-interface PostsTableProps {
-  posts: RedditPost[]
+interface PostWithAnalysis extends Post {
+  post_analyses?: PostAnalysis[]
+  analysis?: {
+    isSolutionRequest: boolean
+    isPainOrAnger: boolean
+    isAdviceRequest: boolean
+    isMoneyTalk: boolean
+  }
 }
 
-function CategoryBadges({ analysis }: { analysis?: PostCategory }) {
+interface PostsTableProps {
+  posts: PostWithAnalysis[]
+}
+
+function CategoryBadges({ post }: { post: PostWithAnalysis }) {
+  // Check both analysis formats since we support both Reddit API and database sources
+  const analysis = post.analysis || (post.post_analyses?.[0] && {
+    isSolutionRequest: post.post_analyses[0].is_solution_request,
+    isPainOrAnger: post.post_analyses[0].is_pain_or_anger,
+    isAdviceRequest: post.post_analyses[0].is_advice_request,
+    isMoneyTalk: post.post_analyses[0].is_money_talk
+  });
+
   if (!analysis) return null;
 
   return (
@@ -127,7 +144,7 @@ export function PostsTable({ posts }: PostsTableProps) {
               </TableCell>
               <TableCell>{post.num_comments}</TableCell>
               <TableCell>
-                <CategoryBadges analysis={post.analysis} />
+                <CategoryBadges post={post} />
               </TableCell>
             </TableRow>
           ))}
