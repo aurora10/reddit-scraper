@@ -10,48 +10,30 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import type { Post, PostAnalysis } from "@/lib/db"
+import type { PostWithAnalysis } from "@/lib/types"
 
 type SortField = 'score' | 'created_utc' | 'num_comments'
 type SortDirection = 'asc' | 'desc'
-
-interface PostWithAnalysis extends Post {
-  post_analyses?: PostAnalysis[]
-  analysis?: {
-    isSolutionRequest: boolean
-    isPainOrAnger: boolean
-    isAdviceRequest: boolean
-    isMoneyTalk: boolean
-  }
-}
 
 interface PostsTableProps {
   posts: PostWithAnalysis[]
 }
 
 function CategoryBadges({ post }: { post: PostWithAnalysis }) {
-  // Check both analysis formats since we support both Reddit API and database sources
-  const analysis = post.analysis || (post.post_analyses?.[0] && {
-    isSolutionRequest: post.post_analyses[0].is_solution_request,
-    isPainOrAnger: post.post_analyses[0].is_pain_or_anger,
-    isAdviceRequest: post.post_analyses[0].is_advice_request,
-    isMoneyTalk: post.post_analyses[0].is_money_talk
-  });
-
-  if (!analysis) return null;
+  if (!post.analysis) return null;
 
   return (
     <div className="flex gap-2 flex-wrap">
-      {analysis.isSolutionRequest && (
+      {post.analysis.isSolutionRequest && (
         <Badge className="bg-blue-500">Solution</Badge>
       )}
-      {analysis.isPainOrAnger && (
+      {post.analysis.isPainOrAnger && (
         <Badge className="bg-red-500">Pain</Badge>
       )}
-      {analysis.isAdviceRequest && (
+      {post.analysis.isAdviceRequest && (
         <Badge className="bg-green-500">Advice</Badge>
       )}
-      {analysis.isMoneyTalk && (
+      {post.analysis.isMoneyTalk && (
         <Badge className="bg-yellow-500">Money</Badge>
       )}
     </div>

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from './ui/button'
-import { supabase } from '../lib/supabase'
+import { supabase } from '../lib/supabase-client'
 import { useRouter } from 'next/navigation'
 
 export function SignOutButton() {

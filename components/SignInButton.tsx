@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from './ui/button'
-import { supabase } from '../lib/supabase'
+import { supabase } from '@/lib/supabase-client'
 
 export function SignInButton() {
   const [isLoading, setIsLoading] = useState(false)
@@ -13,7 +13,11 @@ export function SignInButton() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       })
 

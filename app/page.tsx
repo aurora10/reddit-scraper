@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase-client';
 import { SignInButton } from "../components/SignInButton";
 import { SignOutButton } from "../components/SignOutButton";
 import { SubredditCard } from "../components/SubredditCard";

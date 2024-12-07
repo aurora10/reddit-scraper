@@ -6,19 +6,26 @@ export async function middleware(req: NextRequest) {
   const res = NextResponse.next()
   const supabase = createMiddlewareClient({ req, res })
 
-  // Refresh session if expired - required for Server Components
-  const {
-    data: { session },
-  } = await supabase.auth.getSession()
-
-  // Store the session in a cookie
-  if (session) {
-    res.cookies.set('session', JSON.stringify(session), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      path: '/'
-    })
+  try {
+    // Refresh session if expired
+    const { data: { session }, error } = await supabase.auth.getSession()
+    
+    if (error) {
+      console.error('Session error in middleware:', error)
+    }
+    
+    if (session) {
+      console.log('Session found in middleware:', {
+        userId: session.user.id,
+        email: session.user.email,
+        hasAccessToken: !!session.access_token,
+        hasRefreshToken: !!session.refresh_token
+      })
+    } else {
+      console.log('No session found in middleware')
+    }
+  } catch (error) {
+    console.error('Middleware error:', error)
   }
 
   return res
