@@ -8,6 +8,7 @@ import { serverDb } from "@/lib/db-server";
 import { cookies } from 'next/headers';
 import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import type { PostWithAnalysis, RedditPost } from "@/lib/types";
+import { convertDbAnalysisToPostCategory } from "@/lib/types";
 
 interface SubredditPageProps {
   params: {
@@ -47,17 +48,89 @@ async function getOrCreateSubreddit(name: string, createIfNotExists = false) {
 
 async function analyzeAndStorePosts(redditPosts: RedditPost[], subredditId: string): Promise<PostWithAnalysis[]> {
   try {
-    // Analyze posts
-    console.log('Starting post analysis');
-    const analyses = await analyzePostsConcurrently(
-      redditPosts.map(post => ({ title: post.title, content: post.content }))
-    );
-    console.log('Completed post analysis');
+    console.log('Starting analyzeAndStorePosts with', redditPosts.length, 'posts');
+    const postsToAnalyze: { post: RedditPost; dbId: string }[] = [];
+    const existingAnalyses = new Map();
+    const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
-    return redditPosts.map((post, index) => ({
-      ...post,
-      analysis: analyses[index]
-    }));
+    // First, create or update posts in the database and check for existing analyses
+    for (const post of redditPosts) {
+      try {
+        console.log('Processing post:', post.id);
+        // Create or update post in database
+        const dbPost = await serverDb.createPost({
+          subreddit_id: subredditId,
+          reddit_id: post.id,
+          title: post.title,
+          author: post.author,
+          content: post.content || '',
+          created_utc: post.created_utc,
+          score: post.score,
+          num_comments: post.num_comments,
+          url: post.url,
+          permalink: post.permalink,
+          fetched_at: new Date().toISOString()
+        });
+
+        console.log('Post stored in DB:', dbPost.id);
+
+        // Check for existing analysis less than 24 hours old
+        const existingAnalysis = await serverDb.getPostAnalysis(dbPost.id);
+        console.log('Existing analysis:', existingAnalysis);
+        
+        if (!existingAnalysis || new Date(existingAnalysis.analyzed_at) < new Date(twentyFourHoursAgo)) {
+          postsToAnalyze.push({ post, dbId: dbPost.id });
+        } else {
+          existingAnalyses.set(post.id, convertDbAnalysisToPostCategory(existingAnalysis));
+        }
+      } catch (error) {
+        console.error('Error processing individual post:', error);
+        // Continue with other posts even if one fails
+      }
+    }
+
+    // Analyze posts that need it
+    if (postsToAnalyze.length > 0) {
+      console.log(`Analyzing ${postsToAnalyze.length} posts`);
+      const analyses = await analyzePostsConcurrently(
+        postsToAnalyze.map(({ post }) => ({ title: post.title, content: post.content }))
+      );
+      console.log('Analyses completed:', analyses);
+
+      // Store new analyses in database
+      for (let i = 0; i < postsToAnalyze.length; i++) {
+        try {
+          const { post, dbId } = postsToAnalyze[i];
+          const analysis = analyses[i];
+          console.log('Storing analysis for post:', dbId, analysis);
+          
+          await serverDb.createPostAnalysis({
+            post_id: dbId,
+            is_solution_request: analysis.isSolutionRequest,
+            is_pain_or_anger: analysis.isPainOrAnger,
+            is_advice_request: analysis.isAdviceRequest,
+            is_money_talk: analysis.isMoneyTalk,
+            analyzed_at: new Date().toISOString()
+          });
+
+          existingAnalyses.set(post.id, analysis);
+        } catch (error) {
+          console.error('Error storing individual analysis:', error);
+          // Continue with other analyses even if one fails
+        }
+      }
+    }
+
+    // Return all posts with their analyses
+    console.log('Returning posts with analyses');
+    return redditPosts.map(post => {
+      const analysis = existingAnalyses.get(post.id);
+      console.log('Post:', post.id, 'Analysis:', analysis);
+      return {
+        ...post,
+        analysis: analysis || null
+      };
+    });
   } catch (error) {
     console.error('Error in analyzeAndStorePosts:', error);
     throw error;
@@ -105,6 +178,7 @@ async function getAnalyzedPosts(subredditName: string, isAuthenticated: boolean)
       }
     } catch (error) {
       console.error('Error processing posts:', error);
+      throw error; // Propagate error to show proper error message
     }
 
     // If analysis fails, return posts without analysis

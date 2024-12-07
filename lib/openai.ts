@@ -17,7 +17,7 @@ export type PostCategory = z.infer<typeof PostCategorySchema>;
 export async function analyzePostCategory(post: { title: string; content?: string }) {
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",

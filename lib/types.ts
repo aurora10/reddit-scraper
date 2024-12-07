@@ -9,6 +9,7 @@ export type Database = {
           id: string
           name: string
           display_name: string
+          user_id: string
           last_fetched_at: string | null
           created_at: string
           updated_at: string
@@ -17,6 +18,7 @@ export type Database = {
           id?: string
           name: string
           display_name: string
+          user_id: string
           last_fetched_at?: string | null
           created_at?: string
           updated_at?: string
@@ -25,6 +27,7 @@ export type Database = {
           id?: string
           name?: string
           display_name?: string
+          user_id?: string
           last_fetched_at?: string | null
           created_at?: string
           updated_at?: string
@@ -35,6 +38,7 @@ export type Database = {
           id: string
           subreddit_id: string
           reddit_id: string
+          user_id: string
           title: string
           author: string
           content: string | null
@@ -51,6 +55,7 @@ export type Database = {
           id?: string
           subreddit_id: string
           reddit_id: string
+          user_id: string
           title: string
           author: string
           content?: string | null
@@ -67,6 +72,7 @@ export type Database = {
           id?: string
           subreddit_id?: string
           reddit_id?: string
+          user_id?: string
           title?: string
           author?: string
           content?: string | null
@@ -84,6 +90,7 @@ export type Database = {
         Row: {
           id: string
           post_id: string
+          user_id: string
           is_solution_request: boolean
           is_pain_or_anger: boolean
           is_advice_request: boolean
@@ -95,6 +102,7 @@ export type Database = {
         Insert: {
           id?: string
           post_id: string
+          user_id: string
           is_solution_request: boolean
           is_pain_or_anger: boolean
           is_advice_request: boolean
@@ -106,6 +114,7 @@ export type Database = {
         Update: {
           id?: string
           post_id?: string
+          user_id?: string
           is_solution_request?: boolean
           is_pain_or_anger?: boolean
           is_advice_request?: boolean
@@ -135,7 +144,16 @@ export interface RedditPost {
   permalink: string
 }
 
+// Helper function to convert database analysis to PostCategory format
+export function convertDbAnalysisToPostCategory(dbAnalysis: PostAnalysis): PostCategory {
+  return {
+    isSolutionRequest: dbAnalysis.is_solution_request,
+    isPainOrAnger: dbAnalysis.is_pain_or_anger,
+    isAdviceRequest: dbAnalysis.is_advice_request,
+    isMoneyTalk: dbAnalysis.is_money_talk
+  };
+}
+
 export interface PostWithAnalysis extends RedditPost {
-  post_analyses?: PostAnalysis[]
-  analysis?: PostCategory | null
+  analysis: PostCategory | null;
 }
