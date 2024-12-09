@@ -3,6 +3,10 @@ import { z } from "zod";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
+  baseURL: "https://oai.helicone.ai/v1",
+  defaultHeaders: {
+    "Helicone-Auth": `Bearer ${process.env.HELICONE_API_KEY}`,
+  },
 });
 
 export const PostCategorySchema = z.object({
@@ -13,6 +17,9 @@ export const PostCategorySchema = z.object({
 });
 
 export type PostCategory = z.infer<typeof PostCategorySchema>;
+
+// Helper function to delay execution
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export async function analyzePostCategory(post: { title: string; content?: string }) {
   try {
@@ -80,3 +87,6 @@ export async function analyzePostsConcurrently(posts: { title: string; content?:
   const analysisPromises = posts.map((post) => analyzePostCategory(post));
   return Promise.all(analysisPromises);
 }
+
+
+
