@@ -1,4 +1,5 @@
-import type { PostCategory } from './openai'
+// Remove unused import
+// import type { PostCategory } from './openai'
 
 // Supabase Database Types
 export type Database = {
@@ -128,10 +129,18 @@ export type Database = {
   }
 }
 
-export type Post = Database['public']['Tables']['posts']['Row']
-export type PostAnalysis = Database['public']['Tables']['post_analyses']['Row']
+export type DatabasePost = Database['public']['Tables']['posts']['Row']
+export type DatabasePostAnalysis = Database['public']['Tables']['post_analyses']['Row']
 export type Subreddit = Database['public']['Tables']['subreddits']['Row']
 
+export interface PostAnalysisCategories {
+  isSolutionRequest: boolean
+  isPainOrAnger: boolean
+  isAdviceRequest: boolean
+  isMoneyTalk: boolean
+}
+
+// Add RedditPost type
 export interface RedditPost {
   id: string
   title: string
@@ -144,16 +153,21 @@ export interface RedditPost {
   permalink: string
 }
 
-// Helper function to convert database analysis to PostCategory format
-export function convertDbAnalysisToPostCategory(dbAnalysis: PostAnalysis): PostCategory {
-  return {
-    isSolutionRequest: dbAnalysis.is_solution_request,
-    isPainOrAnger: dbAnalysis.is_pain_or_anger,
-    isAdviceRequest: dbAnalysis.is_advice_request,
-    isMoneyTalk: dbAnalysis.is_money_talk
-  };
+// Add PostWithAnalysis type
+export interface PostWithAnalysis extends RedditPost {
+  analysis: PostAnalysisCategories | null
 }
 
-export interface PostWithAnalysis extends RedditPost {
-  analysis: PostCategory | null;
+export interface Post {
+  id: string
+  reddit_id: string
+  title: string
+  content: string | null
+  url: string
+  author: string
+  created_at: string
+  subreddit: string
+  user_id: string
+  analysis?: PostAnalysisCategories | null
+  analyzed_at?: string | null
 }

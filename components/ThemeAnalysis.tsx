@@ -1,203 +1,117 @@
-// 'use client'
-
-// import { useState } from 'react'
-// import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-// import { PostsTable } from "@/components/PostsTable"
-// import type { PostWithAnalysis } from "@/lib/types"
-
-// interface ThemeAnalysisProps {
-//   posts: PostWithAnalysis[]
-// }
-
-// interface ThemeCardProps {
-//   title: string
-//   description: string
-//   posts: PostWithAnalysis[]
-//   filterFn: (post: PostWithAnalysis) => boolean
-//   isSelected: boolean
-//   onClick: () => void
-// }
-
-// function ThemeCard({ title, description, posts, filterFn, isSelected, onClick }: ThemeCardProps) {
-//   const matchingPosts = posts.filter(filterFn)
-  
-//   return (
-//     <Card 
-//       className={`cursor-pointer hover:bg-gray-50 transition-colors ${isSelected ? 'border-blue-500 border-2' : ''}`}
-//       onClick={onClick}
-//     >
-//       <CardHeader>
-//         <CardTitle>{title}</CardTitle>
-//       </CardHeader>
-//       <CardContent>
-//         <p className="text-gray-600 mb-2">{description}</p>
-//         <p className="text-sm font-medium">
-//           {matchingPosts.length} posts in this category
-//         </p>
-//       </CardContent>
-//     </Card>
-//   )
-// }
-
-// export function ThemeAnalysis({ posts }: ThemeAnalysisProps) {
-//   const [selectedTheme, setSelectedTheme] = useState<string | null>(null)
-
-//   const themes = [
-//     {
-//       id: 'solution',
-//       title: 'Solution Requests',
-//       description: 'Posts seeking solutions to problems',
-//       filterFn: (post: PostWithAnalysis) => post.analysis?.isSolutionRequest ?? false
-//     },
-//     {
-//       id: 'pain',
-//       title: 'Pain & Anger',
-//       description: 'Posts expressing frustration or anger',
-//       filterFn: (post: PostWithAnalysis) => post.analysis?.isPainOrAnger ?? false
-//     },
-//     {
-//       id: 'advice',
-//       title: 'Advice Requests',
-//       description: 'Posts seeking advice',
-//       filterFn: (post: PostWithAnalysis) => post.analysis?.isAdviceRequest ?? false
-//     },
-//     {
-//       id: 'money',
-//       title: 'Money Talk',
-//       description: 'Posts discussing financial aspects',
-//       filterFn: (post: PostWithAnalysis) => post.analysis?.isMoneyTalk ?? false
-//     }
-//   ]
-
-//   const selectedThemeData = themes.find(theme => theme.id === selectedTheme)
-//   const filteredPosts = selectedThemeData 
-//     ? posts.filter(selectedThemeData.filterFn)
-//     : []
-
-//   return (
-//     <div className="space-y-8">
-//       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-//         {themes.map(theme => (
-//           <ThemeCard
-//             key={theme.id}
-//             title={theme.title}
-//             description={theme.description}
-//             posts={posts}
-//             filterFn={theme.filterFn}
-//             isSelected={selectedTheme === theme.id}
-//             onClick={() => setSelectedTheme(selectedTheme === theme.id ? null : theme.id)}
-//           />
-//         ))}
-//       </div>
-
-//       {selectedTheme && selectedThemeData && filteredPosts.length > 0 && (
-//         <div className="space-y-4">
-//           <h2 className="text-xl font-semibold">{selectedThemeData.title} Posts</h2>
-//           <PostsTable posts={filteredPosts} />
-//         </div>
-//       )}
-//     </div>
-//   )
-// }
-
 'use client'
 
 import { useState } from 'react'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { PostsTable } from "@/components/PostsTable"
-import type { PostWithAnalysis } from "@/lib/types"
+import { PostWithAnalysis } from '@/lib/types'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table'
 
 interface ThemeAnalysisProps {
   posts: PostWithAnalysis[]
 }
 
-interface ThemeCardProps {
-  title: string
-  description: string
-  posts: PostWithAnalysis[]
-  filterFn: (post: PostWithAnalysis) => boolean
-  isSelected: boolean
-  onClick: () => void
-}
+const categoryColors = {
+  'Solution Requests': 'bg-green-500',
+  'Pain & Anger': 'bg-red-500',
+  'Advice Requests': 'bg-blue-500',
+  'Money Talk': 'bg-yellow-500'
+} as const
 
-function ThemeCard({ title, description, posts, filterFn, isSelected, onClick }: ThemeCardProps) {
-  const matchingPosts = posts.filter(filterFn)
-  
-  return (
-    <Card 
-      className={`cursor-pointer transition-all duration-300 bg-navy-800 hover:bg-navy-700 ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
-      onClick={onClick}
-    >
-      <CardHeader>
-        <CardTitle className="text-blue-300">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-blue-200 mb-2">{description}</p>
-        <p className="text-sm font-medium text-blue-300">
-          {matchingPosts.length} posts in this category
-        </p>
-      </CardContent>
-    </Card>
-  )
-}
+type CategoryKey = keyof typeof categoryColors
 
 export function ThemeAnalysis({ posts }: ThemeAnalysisProps) {
-  const [selectedTheme, setSelectedTheme] = useState<string | null>(null)
+  const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null)
+  const analyzedPosts = posts.filter(post => post.analysis)
+  
+  const categories = {
+    'Solution Requests': analyzedPosts.filter(post => post.analysis?.isSolutionRequest),
+    'Pain & Anger': analyzedPosts.filter(post => post.analysis?.isPainOrAnger),
+    'Advice Requests': analyzedPosts.filter(post => post.analysis?.isAdviceRequest),
+    'Money Talk': analyzedPosts.filter(post => post.analysis?.isMoneyTalk),
+  }
 
-  const themes = [
-    {
-      id: 'solution',
-      title: 'Solution Requests',
-      description: 'Posts seeking solutions to problems',
-      filterFn: (post: PostWithAnalysis) => post.analysis?.isSolutionRequest ?? false
-    },
-    {
-      id: 'pain',
-      title: 'Pain & Anger',
-      description: 'Posts expressing frustration or anger',
-      filterFn: (post: PostWithAnalysis) => post.analysis?.isPainOrAnger ?? false
-    },
-    {
-      id: 'advice',
-      title: 'Advice Requests',
-      description: 'Posts seeking advice',
-      filterFn: (post: PostWithAnalysis) => post.analysis?.isAdviceRequest ?? false
-    },
-    {
-      id: 'money',
-      title: 'Money Talk',
-      description: 'Posts discussing financial aspects',
-      filterFn: (post: PostWithAnalysis) => post.analysis?.isMoneyTalk ?? false
+  const total = analyzedPosts.length
+
+  const getFilteredPosts = () => {
+    if (!selectedCategory) return []
+    return categories[selectedCategory]
+  }
+
+  const getRedditUrl = (permalink: string) => {
+    if (permalink.startsWith('https://')) {
+      return permalink;
     }
-  ]
-
-  const selectedThemeData = themes.find(theme => theme.id === selectedTheme)
-  const filteredPosts = selectedThemeData 
-    ? posts.filter(selectedThemeData.filterFn)
-    : []
+    if (permalink.startsWith('/r/')) {
+      return `https://reddit.com${permalink}`;
+    }
+    return `https://reddit.com/${permalink.replace(/^\/+/, '')}`;
+  }
 
   return (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {themes.map(theme => (
-          <ThemeCard
-            key={theme.id}
-            title={theme.title}
-            description={theme.description}
-            posts={posts}
-            filterFn={theme.filterFn}
-            isSelected={selectedTheme === theme.id}
-            onClick={() => setSelectedTheme(selectedTheme === theme.id ? null : theme.id)}
-          />
+    <div className="space-y-6">
+      <div className="grid gap-4">
+        {Object.entries(categories).map(([category, posts]) => (
+          <button
+            key={category}
+            onClick={() => setSelectedCategory(selectedCategory === category as CategoryKey ? null : category as CategoryKey)}
+            className={`w-full text-left transition-colors ${
+              selectedCategory === category ? 'ring-2 ring-blue-400' : ''
+            }`}
+          >
+            <div className="bg-navy-700 p-4 rounded-lg hover:bg-navy-600">
+              <div className="flex justify-between items-center mb-3">
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${categoryColors[category as CategoryKey]}`} />
+                  <h3 className="font-medium text-white">{category}</h3>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-blue-300">{posts.length} posts</span>
+                  <span className="text-sm text-blue-300">
+                    ({total > 0 ? Math.round((posts.length / total) * 100) : 0}%)
+                  </span>
+                </div>
+              </div>
+              <div className="w-full bg-navy-600 rounded-full h-2">
+                <div
+                  className={`h-2 rounded-full ${categoryColors[category as CategoryKey]}`}
+                  style={{ width: `${total > 0 ? (posts.length / total) * 100 : 0}%` }}
+                />
+              </div>
+            </div>
+          </button>
         ))}
       </div>
 
-      {selectedTheme && selectedThemeData && filteredPosts.length > 0 && (
-        <div className="space-y-6">
-          <h2 className="text-2xl font-semibold text-blue-300 bg-navy-800 p-4 rounded-lg">
-            {selectedThemeData.title} Posts
-          </h2>
-          <PostsTable posts={filteredPosts} />
+      {selectedCategory && (
+        <div className="mt-8">
+          <h3 className="text-xl font-semibold mb-4 text-blue-300">
+            {selectedCategory} Posts
+          </h3>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Title</TableHead>
+                <TableHead>Author</TableHead>
+                <TableHead>Link</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {getFilteredPosts().map((post) => (
+                <TableRow key={post.id}>
+                  <TableCell className="font-medium">{post.title}</TableCell>
+                  <TableCell>{post.author}</TableCell>
+                  <TableCell>
+                    <a 
+                      href={getRedditUrl(post.permalink)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-400 hover:text-blue-300 underline"
+                    >
+                      View Post
+                    </a>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
