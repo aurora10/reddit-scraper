@@ -2,7 +2,7 @@
 // import type { PostCategory } from './openai'
 
 // Supabase Database Types
-export type Database = {
+export interface Database {
   public: {
     Tables: {
       subreddits: {
@@ -11,28 +11,27 @@ export type Database = {
           name: string
           display_name: string
           user_id: string
-          last_fetched_at: string | null
           created_at: string
-          updated_at: string
         }
         Insert: {
           id?: string
           name: string
           display_name: string
           user_id: string
-          last_fetched_at?: string | null
           created_at?: string
-          updated_at?: string
         }
         Update: {
           id?: string
           name?: string
           display_name?: string
           user_id?: string
-          last_fetched_at?: string | null
           created_at?: string
-          updated_at?: string
         }
+      }
+      subreddit_analytics: {
+        Row: SubredditAnalytics
+        Insert: Omit<SubredditAnalytics, 'id'>
+        Update: Partial<SubredditAnalytics>
       }
       posts: {
         Row: {
@@ -129,6 +128,31 @@ export type Database = {
   }
 }
 
+export interface SubredditAnalytics {
+  id: string
+  name: string
+  display_name: string
+  post_count: number
+  analysis_results: {
+    topKeywords: Array<{ word: string, count: number }>
+    sentimentScore: {
+      average: number
+      distribution: {
+        positive: number
+        neutral: number
+        negative: number
+      }
+    }
+    postFrequency: {
+      byHour: number[]
+      mostActiveHour: number
+    }
+    analyzedAt: string
+  }
+  last_updated: string
+  created_at: string
+}
+
 export type DatabasePost = Database['public']['Tables']['posts']['Row']
 export type DatabasePostAnalysis = Database['public']['Tables']['post_analyses']['Row']
 export type Subreddit = Database['public']['Tables']['subreddits']['Row']
@@ -145,11 +169,12 @@ export interface RedditPost {
   id: string
   title: string
   author: string
-  content: string
+  selftext: string
+  url: string
   created_utc: number
   score: number
   num_comments: number
-  url: string
+  subreddit: string
   permalink: string
 }
 
