@@ -236,7 +236,7 @@ export function AddSubredditModal({ onAdd }: AddSubredditModalProps) {
               value={url}
               onChange={(e) => setUrl(e.target.value)}
               disabled={isLoading}
-              className="bg-navy-700 border-blue-500 text-white placeholder-blue-300"
+              className="bg-navy-700 border-blue-500 text-gray-400 placeholder-blue-300"
             />
             {error && (
               <p className="text-sm text-red-400 mt-2">
@@ -265,4 +265,3 @@ export function AddSubredditModal({ onAdd }: AddSubredditModalProps) {
     </Dialog>
   )
 }
-
