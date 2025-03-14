@@ -12,6 +12,7 @@ export interface Database {
           display_name: string
           user_id: string
           created_at: string
+          last_fetched_at: string | null
         }
         Insert: {
           id?: string
@@ -19,6 +20,7 @@ export interface Database {
           display_name: string
           user_id: string
           created_at?: string
+          last_fetched_at?: string | null
         }
         Update: {
           id?: string
@@ -26,6 +28,7 @@ export interface Database {
           display_name?: string
           user_id?: string
           created_at?: string
+          last_fetched_at?: string | null
         }
       }
       subreddit_analytics: {

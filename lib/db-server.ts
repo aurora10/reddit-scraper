@@ -38,6 +38,52 @@ async function withAuth<T>(operation: (supabase: ReturnType<typeof getSupabase>,
 
 // Server-side database operations
 export const serverDb = {
+  deleteSubreddit: async (id: string) => {
+    return withAuth(async (supabase, userId) => {
+      try {
+        // Start a transaction
+        // First verify the subreddit exists and belongs to the user
+        const { data: subreddit, error: findError } = await supabase
+          .from('subreddits')
+          .select('id')
+          .eq('id', id)
+          .eq('user_id', userId)
+          .single();
+
+        if (findError) {
+          if (findError.code === 'PGRST116') { // Not found
+            throw new Error('Subreddit not found or unauthorized');
+          }
+          throw findError;
+        }
+
+        // If subreddit exists and belongs to user, proceed with deletion
+        const { error: deleteError } = await supabase.rpc('delete_subreddit_and_data', {
+          request_user_id: userId,
+          subreddit_id: id
+        });
+
+        if (deleteError) {
+          console.error('Supabase RPC error:', {
+            message: deleteError.message,
+            code: deleteError.code,
+            details: deleteError.details,
+            hint: deleteError.hint
+          });
+          throw deleteError;
+        }
+        return true;
+      } catch (error) {
+        console.error('Error deleting subreddit:', {
+          error,
+          subredditId: id,
+          userId
+        });
+        throw error;
+      }
+    });
+  },
+
   getSubreddit: async (name: string) => {
     return withAuth(async (supabase, userId) => {
       try {

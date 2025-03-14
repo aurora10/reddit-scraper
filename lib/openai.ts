@@ -44,7 +44,7 @@ export async function analyzePostCategory(post: { title: string; content?: strin
 
     console.log(`Analyzing post: "${post.title}"`);
     const completion = await openai.chat.completions.create({
-      model: "gpt-3.5-turbo",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",

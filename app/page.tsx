@@ -14,6 +14,7 @@ export default function HomePage() {
   const [subreddits, setSubreddits] = useState<Subreddit[]>([]);
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const supabase = createClientComponentClient<Database>();
 
   useEffect(() => {
@@ -55,7 +56,7 @@ export default function HomePage() {
     }
 
     fetchSubreddits();
-  }, [user, supabase]);
+  }, [user, supabase, refreshTrigger]);
 
   const handleAddSubreddit = (subreddit: Subreddit) => {
     setSubreddits(prev => [...prev, subreddit]);
@@ -100,6 +101,7 @@ export default function HomePage() {
                 <SubredditCard
                   key={subreddit.id}
                   subreddit={subreddit}
+                  onDelete={() => setRefreshTrigger(prev => prev + 1)}
                 />
               ))}
             </div>
@@ -130,4 +132,3 @@ export default function HomePage() {
     </div>
   );
 }
-
