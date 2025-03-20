@@ -33,6 +33,28 @@ export async function GET(request: Request) {
         hasRefreshToken: !!session.refresh_token
       })
 
+      // Check if user exists in our users table
+      const { data: existingUser, error: selectError } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', session.user.id)
+        .single()
+
+      if (!existingUser) {
+        const { error: insertError } = await supabase
+          .from('users')
+          .insert({
+            id: session.user.id,
+            email: session.user.email
+          })
+
+        if (insertError) {
+          console.error('Error creating user:', insertError)
+          throw insertError
+        }
+        console.log('Created new user record for:', session.user.email)
+      }
+
       // Redirect back to the previous page or home
       return NextResponse.redirect(new URL('/', requestUrl.origin))
     }
