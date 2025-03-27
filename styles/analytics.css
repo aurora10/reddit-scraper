@@ -1,0 +1,59 @@
+/* Custom animations */
+@keyframes pulse-subtle {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+.animate-pulse-subtle {
+  animation: pulse-subtle 2s ease-in-out infinite;
+}
+
+/* Card hover effects */
+.card-hover {
+  transition: all 0.2s ease-in-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.05);
+}
+
+/* Gradient backgrounds */
+.bg-gradient-card-blue {
+  background-image: linear-gradient(to right, #EFF6FF, #F9FAFB);
+}
+
+.bg-gradient-card-purple {
+  background-image: linear-gradient(to right, #F5F3FF, #F9FAFB);
+}
+
+.bg-gradient-card-amber {
+  background-image: linear-gradient(to right, #FFFBEB, #F9FAFB);
+}
+
+/* Badge animations */
+.badge-keyword {
+  transition: all 0.2s ease;
+}
+
+.badge-keyword:hover {
+  transform: scale(1.05);
+}
+
+/* Chart bars */
+.sentiment-bar {
+  transition: height 1s ease-out;
+}
+
+/* Tab transitions */
+.tab-content-transition {
+  transition: opacity 0.3s ease-in-out;
+}
+
+.tab-content-transition:not([hidden]) {
+  opacity: 1;
+}
+
+.tab-content-transition[hidden] {
+  opacity: 0;
+} 
