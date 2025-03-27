@@ -46,6 +46,39 @@ export async function getSession() {
   }
 }
 
+export async function createSession(authToken: string, refreshToken: string) {
+  try {
+    // Set the session with the provided tokens
+    const { data: { session }, error } = await supabase.auth.setSession({
+      access_token: authToken,
+      refresh_token: refreshToken
+    })
+
+    if (error) throw error
+
+    // Set cookies with the tokens
+    const cookieStore = cookies()
+    cookieStore.set('sb-auth-token', authToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 1 week
+    })
+    
+    cookieStore.set('sb-refresh-token', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 1 week
+    })
+
+    return session
+  } catch (error) {
+    console.error('Error creating session:', error)
+    return null
+  }
+}
+
 export async function getCurrentUser() {
   const session = await getSession()
   if (!session) return null

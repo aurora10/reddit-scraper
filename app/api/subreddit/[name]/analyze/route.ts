@@ -5,6 +5,12 @@ import { fetchSubredditPosts } from '@/lib/reddit'
 import { analyzePostCategory } from '@/lib/openai'
 import { Database } from '@/lib/types'
 
+type AnalysisError = {
+  type: 'auth' | 'database' | 'reddit' | 'openai';
+  message: string;
+  details?: any;
+};
+
 export async function POST(
   request: Request,
   { params }: { params: { name: string } }
@@ -18,14 +24,25 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const errors: AnalysisError[] = [];
+
   try {
     console.log('Starting analysis for subreddit:', params.name);
     const redditPosts = await fetchSubredditPosts(params.name)
     console.log(`Fetched ${redditPosts.length} posts to analyze`);
 
+    if (redditPosts.length === 0) {
+      errors.push({
+        type: 'reddit',
+        message: 'No posts found for subreddit',
+        details: { subreddit: params.name }
+      });
+    }
+
     // Process posts sequentially to avoid rate limits
     for (const post of redditPosts) {
       try {
+        console.log(`Processing post ${post.id}: ${post.title}`);
         // Check if post exists and has analysis
         const { data: existingPost } = await supabase
           .from('posts')
@@ -38,7 +55,7 @@ export async function POST(
           .single()
 
         // Skip if post already has analysis
-        if (existingPost?.post_analyses?.length > 0) {
+        if (existingPost?.post_analyses && existingPost.post_analyses.length > 0) {
           console.log(`Post ${post.id} already analyzed, skipping`);
           continue;
         }
@@ -53,7 +70,7 @@ export async function POST(
               reddit_id: post.id,
               title: post.title,
               author: post.author,
-              content: post.content || '',
+              content: post.selftext || '',
               created_utc: post.created_utc,
               score: post.score || 0,
               num_comments: post.num_comments || 0,
@@ -72,7 +89,24 @@ export async function POST(
           .single()
 
         if (postError) {
-          console.error('Error inserting/updating post:', postError);
+          const detailedError = {
+            message: postError.message,
+            code: postError.code,
+            details: postError.details,
+            hint: postError.hint
+          };
+          errors.push({
+            type: 'database',
+            message: 'Error inserting/updating post',
+            details: {
+              postId: post.id,
+              error: detailedError
+            }
+          });
+          console.error('Detailed post insertion error:', {
+            postId: post.id,
+            error: detailedError
+          });
           continue;
         }
 
@@ -80,11 +114,22 @@ export async function POST(
         console.log(`Analyzing post: ${post.title}`);
         const analysis = await analyzePostCategory({
           title: post.title,
-          content: post.content || ''
+          content: post.selftext || ''
         });
 
         if (!analysis) {
-          console.error('No analysis returned for post:', post.id);
+          errors.push({
+            type: 'openai',
+            message: 'No analysis returned for post',
+            details: {
+              postId: post.id,
+              postContent: post.selftext
+            }
+          });
+          console.error('No analysis returned for post:', {
+            postId: post.id,
+              postContent: post.selftext
+          });
           continue;
         }
 
@@ -106,7 +151,24 @@ export async function POST(
           .single()
 
         if (analysisError) {
-          console.error('Error saving analysis:', analysisError);
+          const detailedError = {
+            message: analysisError.message,
+            code: analysisError.code,
+            details: analysisError.details,
+            hint: analysisError.hint
+          };
+          errors.push({
+            type: 'database',
+            message: 'Error saving analysis',
+            details: {
+              postId: dbPost.id,
+              error: detailedError
+            }
+          });
+          console.error('Detailed analysis save error:', {
+            postId: dbPost.id,
+            error: detailedError
+          });
           continue;
         }
 
@@ -133,12 +195,26 @@ export async function POST(
       console.error('Error updating subreddit last_fetched_at:', updateError)
     }
 
-    return NextResponse.json({ status: 'Analysis completed' })
+    if (errors.length > 0) {
+      console.error('Analysis completed with errors:', errors);
+      return NextResponse.json({ 
+        status: 'Analysis completed with errors',
+        errors 
+      }, { status: 207 });
+    }
+
+    return NextResponse.json({ 
+      status: 'Analysis completed successfully',
+      postsProcessed: redditPosts.length
+    })
   } catch (error) {
-    console.error('Error in analysis route:', error)
+    console.error('Critical analysis error:', error)
     return NextResponse.json(
-      { error: 'Failed to process posts' },
+      { 
+        error: 'Failed to process posts',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     )
   }
-} 
+}
