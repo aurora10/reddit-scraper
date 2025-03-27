@@ -1,48 +1,50 @@
-import snoowrap from 'snoowrap'
-import { RedditPost } from '@/lib/types'
+import { RedditPost } from './types'
 
-// Initialize the Reddit client
-const initRedditClient = () => {
-  console.log('Initializing Reddit client...')
-  
-  const client = new snoowrap({
-    userAgent: 'MyApp/1.0.0',
-    clientId: process.env.REDDIT_CLIENT_ID,
-    clientSecret: process.env.REDDIT_CLIENT_SECRET,
-    username: process.env.REDDIT_USERNAME,
-    password: process.env.REDDIT_PASSWORD
-  })
-
-  console.log('Reddit client initialized successfully')
-  return client
+// Define interface for Reddit API response
+interface RedditApiResponse {
+  data: {
+    children: Array<{
+      data: {
+        id: string;
+        title: string;
+        author: string;
+        selftext?: string;
+        created_utc: number;
+        score: number;
+        num_comments: number;
+        url: string;
+        permalink: string;
+      }
+    }>
+  }
 }
 
 // Export the function to fetch subreddit posts
 export async function fetchSubredditPosts(subredditName: string): Promise<RedditPost[]> {
-  const reddit = initRedditClient()
-  
-  try {
-    return new Promise<RedditPost[]>((resolve, reject) => {
-      reddit.getSubreddit(subredditName)
-        .getNew({ limit: 10 })
-        .then(posts => {
-          const redditPosts = posts.map(post => ({
-            id: String(post.id || ''),
-            title: String(post.title || ''),
-            author: typeof post.author === 'string' ? post.author : String(post.author.name),
-            content: String(post.selftext || ''),
-            created_utc: Number(post.created_utc),
-            score: Number(post.score || 0),
-            num_comments: Number(post.num_comments || 0),
-            url: String(post.url || ''),
-            permalink: String(post.permalink || `/r/${subredditName}/comments/${post.id}`),
-          }))
-          resolve(redditPosts)
-        })
-        .catch(reject)
-    })
-  } catch (error) {
-    console.error('Error fetching Reddit posts:', error)
-    throw error
-  }
+  return new Promise((resolve, reject) => {
+    fetch(`https://www.reddit.com/r/${subredditName}/hot.json?limit=25`)
+      .then(response => {
+        if (!response.ok) {
+          throw new Error(`Failed to fetch from Reddit API: ${response.statusText}`)
+        }
+        return response.json()
+      })
+      .then((data: RedditApiResponse) => {
+        const redditPosts = data.data.children.map(child => ({
+          id: child.data.id,
+          title: child.data.title,
+          author: child.data.author,
+          selftext: child.data.selftext || '',
+          content: child.data.selftext || '',
+          created_utc: child.data.created_utc,
+          score: child.data.score || 0,
+          num_comments: child.data.num_comments || 0,
+          subreddit: subredditName,
+          url: child.data.url,
+          permalink: String(child.data.permalink || `/r/${subredditName}/comments/${child.data.id}`),
+        }))
+        resolve(redditPosts)
+      })
+      .catch(reject)
+  })
 }

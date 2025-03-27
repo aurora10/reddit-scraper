@@ -8,8 +8,20 @@ import { Database } from '@/lib/types'
 type AnalysisError = {
   type: 'auth' | 'database' | 'reddit' | 'openai';
   message: string;
-  details?: any;
+  details: Record<string, unknown>;
 };
+
+export interface RedditPost {
+  id: string;
+  title: string;
+  selftext?: string;
+  score: number;
+  created_utc: number;
+  num_comments: number;
+  author: string;
+  url: string;
+  permalink: string;
+}
 
 export async function POST(
   request: Request,

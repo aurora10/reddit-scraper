@@ -15,9 +15,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { AnalysisResults } from "@/lib/types"
 
 // Define tab types
-type TabType = 'overview' | 'thematic-analysis' | 'posts'
+// type TabType = 'overview' | 'thematic-analysis' | 'posts'
 
 export function SubredditAnalytics({ subredditName }: { subredditName: string }) {
   const [activeTab, setActiveTab] = useState<string>('overview')
@@ -107,8 +108,8 @@ export function SubredditAnalytics({ subredditName }: { subredditName: string })
     )
   }
   
-  // Check if thematic analysis data exists
-  const thematicAnalysis = data.analysis_results.thematicAnalysis
+  // Add a type assertion to fix the type error
+  const thematicAnalysis = (data.analysis_results as AnalysisResults).thematicAnalysis
   
   // Get all posts for the selected category
   const postsInSelectedCategory = selectedCategory && thematicAnalysis
@@ -303,7 +304,7 @@ export function SubredditAnalytics({ subredditName }: { subredditName: string })
                     <div>
                       <CardTitle className="flex items-center gap-2">
                         <Tag className="h-5 w-5 text-purple-500" />
-                        Posts in "{selectedCategory}"
+                        Posts in &quot;{selectedCategory}&quot;
                       </CardTitle>
                       <CardDescription>
                         {postsInSelectedCategory.length} posts found

@@ -33,14 +33,47 @@ export async function fetchRedditPosts(subredditName: string): Promise<RedditPos
     throw new Error(`Failed to fetch from Reddit API: ${response.statusText}`)
   }
   
-  const data = await response.json()
-  return data.data.children.map((child: any) => child.data)
+  interface RedditApiChild {
+    data: {
+      id: string;
+      title: string;
+      author: string;
+      selftext?: string;
+      created_utc: number;
+      score: number;
+      num_comments: number;
+      url: string;
+      permalink: string;
+    }
+  }
+  
+  interface RedditData {
+    data: {
+      children: RedditApiChild[];
+    }
+  }
+  
+  const data: RedditData = await response.json()
+  
+  // Transform the API response into RedditPost objects
+  return data.data.children.map(child => ({
+    id: child.data.id,
+    title: child.data.title,
+    author: child.data.author,
+    selftext: child.data.selftext || '',
+    url: child.data.url,
+    created_utc: child.data.created_utc,
+    score: child.data.score,
+    num_comments: child.data.num_comments,
+    subreddit: subredditName,
+    permalink: child.data.permalink
+  }))
 }
 
 // Phase 2: Analyze and store new data
 export async function analyzeAndStoreSubredditData(subredditName: string): Promise<SubredditAnalytics> {
   // Get the current user
-  const { data: userData, error: userError } = await supabase.auth.getUser()
+  const { data: userData } = await supabase.auth.getUser()
   
   // Call the API to analyze the subreddit
   const response = await fetch(`/api/analyze-subreddit?name=${encodeURIComponent(subredditName)}`, {
@@ -94,7 +127,7 @@ export async function analyzeAndStoreSubredditData(subredditName: string): Promi
 }
 
 // Helper function for analysis
-function performAnalysis(posts: RedditPost[]) {
+export function performAnalysis(posts: RedditPost[]) {
   // Extract top keywords from titles and content
   const keywords = extractKeywords(posts)
   
@@ -130,7 +163,8 @@ function extractKeywords(posts: RedditPost[]) {
     .map(([word, count]) => ({ word, count }))
 }
 
-function calculateSentiment(posts: RedditPost[]) {
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+function calculateSentiment(_posts: RedditPost[]) {
   // Placeholder for sentiment analysis
   // In a real app, use a sentiment analysis library or API
   return {

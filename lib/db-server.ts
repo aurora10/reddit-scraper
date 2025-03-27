@@ -43,7 +43,8 @@ export const serverDb = {
       try {
         // Start a transaction
         // First verify the subreddit exists and belongs to the user
-        const { data: subreddit, error: findError } = await supabase
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { data: _, error: findError } = await supabase
           .from('subreddits')
           .select('id')
           .eq('id', id)

@@ -131,29 +131,47 @@ export interface Database {
   }
 }
 
+export interface AnalysisResults {
+  topKeywords: Array<{ word: string; count: number }>;
+  sentimentScore: {
+    average: number;
+    distribution: {
+      positive: number;
+      neutral: number;
+      negative: number;
+    };
+  };
+  postFrequency?: {
+    byHour: number[];
+    mostActiveHour: number;
+  };
+  analyzedAt?: string;
+  thematicAnalysis?: {
+    categoryCounts: Record<string, number>;
+    categorizedPosts: Array<{
+      id: string;
+      title: string;
+      url: string;
+      score: number;
+      created_utc: number;
+      num_comments: number;
+      author: string;
+      selftext?: string;
+      permalink: string;
+      categories: string[];
+    }>;
+  };
+}
+
 export interface SubredditAnalytics {
   id: string
   name: string
   display_name: string
+  analysis_results: AnalysisResults
   post_count: number
-  analysis_results: {
-    topKeywords: Array<{ word: string, count: number }>
-    sentimentScore: {
-      average: number
-      distribution: {
-        positive: number
-        neutral: number
-        negative: number
-      }
-    }
-    postFrequency: {
-      byHour: number[]
-      mostActiveHour: number
-    }
-    analyzedAt: string
-  }
   last_updated: string
   created_at: string
+  user_id: string
 }
 
 export type DatabasePost = Database['public']['Tables']['posts']['Row']

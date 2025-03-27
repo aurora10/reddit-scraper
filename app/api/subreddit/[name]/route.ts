@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server'
 import { serverDb } from '@/lib/db-server'
 
 export async function DELETE(
-  request: Request,
-  { params }: { params: { name: string } }
+  request: Request
 ) {
   try {
     const { searchParams } = new URL(request.url)
@@ -26,20 +25,28 @@ export async function DELETE(
     }
 
     return NextResponse.json({ success: true })
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as Error & { 
+      code?: string; 
+      details?: string;
+      hint?: string;
+      stack?: string;
+    };
+    
     console.error('API route error deleting subreddit:', JSON.stringify({
       error,
-      message: error.message,
-      code: error.code,
-      details: error.details,
-      hint: error.hint,
-      stack: error.stack
+      message: err.message,
+      code: err.code,
+      details: err.details,
+      hint: err.hint,
+      stack: err.stack
     }, null, 2));
+    
     return NextResponse.json(
       { 
         error: 'Failed to delete subreddit',
-        details: error.details,
-        code: error.code
+        details: err.details,
+        code: err.code
       },
       { status: 500 }
     )

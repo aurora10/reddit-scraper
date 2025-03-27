@@ -12,6 +12,23 @@ const CATEGORIES = {
   MONEY_TALK: 'Money Talk'
 }
 
+// Define interfaces for Reddit post data
+interface RedditPost {
+  id: string;
+  title: string;
+  selftext?: string;
+  score: number;
+  created_utc: number;
+  num_comments: number;
+  author: string;
+  url: string;
+  permalink: string;
+}
+
+interface CategorizedPost extends RedditPost {
+  categories: string[];
+}
+
 export async function GET(request: NextRequest) {
   // Get subreddit name from query params
   const searchParams = request.nextUrl.searchParams
@@ -26,9 +43,6 @@ export async function GET(request: NextRequest) {
     const session = await getSession()
     const userId = session?.user?.id || 'anonymous-user'
     
-    // Initialize Supabase client for database operations
-    const supabase = createRouteHandlerClient<Database>({ cookies })
-    
     // Fetch data from Reddit API
     const response = await fetch(`https://www.reddit.com/r/${subredditName}/hot.json?limit=100`)
     
@@ -37,20 +51,20 @@ export async function GET(request: NextRequest) {
     }
     
     const data = await response.json()
-    const posts = data.data.children.map((child: any) => child.data)
+    const posts = data.data.children.map((child: { data: RedditPost }) => child.data)
     
     // Extract text content from posts
-    const textContent = posts.map((post: any) => {
+    const textContent = posts.map((post: RedditPost) => {
       return `${post.title} ${post.selftext || ''}`
     }).join(' ')
     
     // Simple keyword extraction (in a real app, use NLP libraries)
-    const words = textContent.toLowerCase().split(/\W+/).filter(word => 
+    const words = textContent.toLowerCase().split(/\W+/).filter((word: string) => 
       word.length > 3 && !['this', 'that', 'with', 'from', 'have', 'what'].includes(word)
     )
     
     const wordCounts: Record<string, number> = {}
-    words.forEach(word => {
+    words.forEach((word: string) => {
       wordCounts[word] = (wordCounts[word] || 0) + 1
     })
     
@@ -75,25 +89,25 @@ export async function GET(request: NextRequest) {
     ]
 
     // Get all text from posts for sentiment analysis
-    const allText = posts.map(post => `${post.title} ${post.selftext || ''}`).join(' ').toLowerCase()
+    const allText = posts.map((post: RedditPost) => `${post.title} ${post.selftext || ''}`).join(' ').toLowerCase()
 
     // Split into sentences for better context
-    const sentences = allText.split(/[.!?]+/).filter(sentence => sentence.trim().length > 0)
+    const sentences = allText.split(/[.!?]+/).filter((sentence: string) => sentence.trim().length > 0)
 
     let positiveCount = 0
     let negativeCount = 0
     let neutralCount = 0
 
-    sentences.forEach(sentence => {
-      const words = sentence.toLowerCase().split(/\W+/).filter(word => word.length > 2)
+    sentences.forEach((sentence: string) => {
+      const words = sentence.toLowerCase().split(/\W+/).filter((word: string) => word.length > 2)
       
       // Check for negations that might flip sentiment
-      const hasNegation = words.some(word => ['not', 'no', "don't", 'never', 'neither', 'nor', 'without'].includes(word))
+      const hasNegation = words.some((word: string) => ['not', 'no', "don't", 'never', 'neither', 'nor', 'without'].includes(word))
       
       let sentencePositive = 0
       let sentenceNegative = 0
       
-      words.forEach(word => {
+      words.forEach((word: string) => {
         if (positiveWords.includes(word)) sentencePositive++
         else if (negativeWords.includes(word)) sentenceNegative++
       })
@@ -114,7 +128,7 @@ export async function GET(request: NextRequest) {
     })
 
     // Add individual word counts for more granularity
-    words.forEach(word => {
+    words.forEach((word: string) => {
       if (positiveWords.includes(word)) positiveCount += 0.5
       else if (negativeWords.includes(word)) negativeCount += 0.5
     })
@@ -130,7 +144,7 @@ export async function GET(request: NextRequest) {
     }
     
     // Thematic analysis - categorize posts
-    const categorizedPosts = posts.map(post => {
+    const categorizedPosts = posts.map((post: RedditPost) => {
       const text = `${post.title} ${post.selftext || ''}`.toLowerCase()
       
       // Simple rule-based categorization (in a real app, use AI/ML)
@@ -152,147 +166,165 @@ export async function GET(request: NextRequest) {
         selftext: post.selftext || '',
         permalink: post.permalink,
         categories: Object.entries(categories)
-          .filter(([_, matches]) => matches)
+          .filter(([, matches]) => matches)
           .map(([category]) => category)
       }
-    })
+    }) as CategorizedPost[]
     
     // Count posts in each category
     const categoryCounts = {
-      [CATEGORIES.SOLUTION_REQUESTS]: categorizedPosts.filter(post => 
+      [CATEGORIES.SOLUTION_REQUESTS]: categorizedPosts.filter((post: CategorizedPost) => 
         post.categories.includes(CATEGORIES.SOLUTION_REQUESTS)).length,
-      [CATEGORIES.PAIN_ANGER]: categorizedPosts.filter(post => 
+      [CATEGORIES.PAIN_ANGER]: categorizedPosts.filter((post: CategorizedPost) => 
         post.categories.includes(CATEGORIES.PAIN_ANGER)).length,
-      [CATEGORIES.ADVICE_REQUESTS]: categorizedPosts.filter(post => 
+      [CATEGORIES.ADVICE_REQUESTS]: categorizedPosts.filter((post: CategorizedPost) => 
         post.categories.includes(CATEGORIES.ADVICE_REQUESTS)).length,
-      [CATEGORIES.MONEY_TALK]: categorizedPosts.filter(post => 
+      [CATEGORIES.MONEY_TALK]: categorizedPosts.filter((post: CategorizedPost) => 
         post.categories.includes(CATEGORIES.MONEY_TALK)).length
     }
 
     // Get or create subreddit record
-    let subredditId: string;
+    let subredditId: string | undefined;
     
     // Only perform database operations if we have a valid user
     if (userId && userId !== 'anonymous-user') {
-      // Check if subreddit exists
-      const { data: existingSubreddit } = await supabase
-        .from('subreddits')
-        .select('id')
-        .eq('name', subredditName.toLowerCase())
-        .maybeSingle();
+      try {
+        // First, enable service role to bypass RLS policies
+        const supabaseAdmin = createRouteHandlerClient<Database>({ 
+          cookies
+        }, {
+          supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
+          options: {
+            global: {
+              headers: {
+                'x-supabase-auth-token': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
+              }
+            }
+          }
+        });
 
-      if (existingSubreddit?.id) {
-        subredditId = existingSubreddit.id;
-      } else {
-        // Create subreddit
-        const { data: newSubreddit, error: subredditError } = await supabase
+        // Check if subreddit exists
+        const { data: existingSubreddit } = await supabaseAdmin
           .from('subreddits')
-          .insert({
-            name: subredditName.toLowerCase(),
-            display_name: subredditName,
-            user_id: userId,
-            last_fetched_at: new Date().toISOString()
-          })
           .select('id')
-          .single();
+          .eq('name', subredditName.toLowerCase())
+          .maybeSingle();
 
-        if (subredditError) {
-          console.error('Error creating subreddit:', subredditError);
+        if (existingSubreddit?.id) {
+          subredditId = existingSubreddit.id;
         } else {
-          subredditId = newSubreddit.id;
-        }
-      }
+          // Create subreddit
+          const { data: newSubreddit, error: subredditError } = await supabaseAdmin
+            .from('subreddits')
+            .insert({
+              name: subredditName.toLowerCase(),
+              display_name: subredditName,
+              user_id: userId,
+              last_fetched_at: new Date().toISOString()
+            })
+            .select('id')
+            .single();
 
-      // Save subreddit analytics
-      if (subredditId) {
-        const { error: analyticsError } = await supabase
-          .from('subreddit_analytics')
-          .insert({
-            name: subredditName.toLowerCase(),
-            display_name: subredditName,
-            analysis_results: {
-              topKeywords,
-              sentimentScore,
-              categoryCounts
-            },
-            post_count: posts.length,
-            user_id: userId
-          })
-          .select()
-          .single();
-
-        if (analyticsError) {
-          console.error('Error saving subreddit analytics:', analyticsError);
+          if (subredditError) {
+            console.error('Error creating subreddit:', subredditError);
+          } else {
+            subredditId = newSubreddit.id;
+          }
         }
 
-        // Process and save individual posts
-        for (const post of categorizedPosts) {
-          try {
-            // Check if post exists
-            const { data: existingPost } = await supabase
-              .from('posts')
-              .select('id, post_analyses (*)')
-              .eq('reddit_id', post.id)
-              .maybeSingle();
+        // Save subreddit analytics
+        if (subredditId) {
+          const { error: analyticsError } = await supabaseAdmin
+            .from('subreddit_analytics')
+            .insert({
+              name: subredditName.toLowerCase(),
+              display_name: subredditName,
+              analysis_results: {
+                topKeywords,
+                sentimentScore,
+                categoryCounts
+              },
+              post_count: posts.length,
+              user_id: userId
+            })
+            .select()
+            .single();
 
-            // Skip if post already has analysis
-            if (existingPost?.post_analyses && existingPost.post_analyses.length > 0) {
-              console.log(`Post ${post.id} already analyzed, skipping`);
-              continue;
-            }
-
-            // Insert or update post
-            const { data: dbPost, error: postError } = await supabase
-              .from('posts')
-              .upsert({
-                subreddit_id: subredditId,
-                user_id: userId,
-                reddit_id: post.id,
-                title: post.title,
-                author: post.author,
-                content: post.selftext || '',
-                created_utc: post.created_utc,
-                score: post.score || 0,
-                num_comments: post.num_comments || 0,
-                url: post.url,
-                permalink: post.permalink,
-                fetched_at: new Date().toISOString()
-              }, {
-                onConflict: 'reddit_id',
-                ignoreDuplicates: false
-              })
-              .select()
-              .single();
-
-            if (postError) {
-              console.error('Error saving post:', postError);
-              continue;
-            }
-
-            // Save post analysis
-            const categories = post.categories || [];
-            const { error: analysisError } = await supabase
-              .from('post_analyses')
-              .insert({
-                post_id: dbPost.id,
-                user_id: userId,
-                is_solution_request: categories.includes(CATEGORIES.SOLUTION_REQUESTS),
-                is_pain_or_anger: categories.includes(CATEGORIES.PAIN_ANGER),
-                is_advice_request: categories.includes(CATEGORIES.ADVICE_REQUESTS),
-                is_money_talk: categories.includes(CATEGORIES.MONEY_TALK),
-                analyzed_at: new Date().toISOString()
-              });
-
-            if (analysisError) {
-              console.error('Error saving post analysis:', analysisError);
-            }
-          } catch (error) {
-            console.error('Error processing post:', error);
+          if (analyticsError) {
+            console.error('Error saving subreddit analytics:', analyticsError);
           }
 
-          // Add a small delay between posts to avoid rate limits
-          await new Promise(resolve => setTimeout(resolve, 200));
+          // Process and save individual posts
+          for (const post of categorizedPosts) {
+            try {
+              // Check if post exists
+              const { data: existingPost } = await supabaseAdmin
+                .from('posts')
+                .select('id, post_analyses (*)')
+                .eq('reddit_id', post.id)
+                .maybeSingle();
+
+              // Skip if post already has analysis
+              if (existingPost?.post_analyses && existingPost.post_analyses.length > 0) {
+                console.log(`Post ${post.id} already analyzed, skipping`);
+                continue;
+              }
+
+              // Insert or update post
+              const { data: dbPost, error: postError } = await supabaseAdmin
+                .from('posts')
+                .upsert({
+                  subreddit_id: subredditId,
+                  user_id: userId,
+                  reddit_id: post.id,
+                  title: post.title,
+                  author: post.author,
+                  content: post.selftext || '',
+                  created_utc: post.created_utc,
+                  score: post.score || 0,
+                  num_comments: post.num_comments || 0,
+                  url: post.url,
+                  permalink: post.permalink,
+                  fetched_at: new Date().toISOString()
+                }, {
+                  onConflict: 'reddit_id',
+                  ignoreDuplicates: false
+                })
+                .select()
+                .single();
+
+              if (postError) {
+                console.error('Error saving post:', postError);
+                continue;
+              }
+
+              // Save post analysis
+              const categories = post.categories || [];
+              const { error: analysisError } = await supabaseAdmin
+                .from('post_analyses')
+                .insert({
+                  post_id: dbPost.id,
+                  user_id: userId,
+                  is_solution_request: categories.includes(CATEGORIES.SOLUTION_REQUESTS),
+                  is_pain_or_anger: categories.includes(CATEGORIES.PAIN_ANGER),
+                  is_advice_request: categories.includes(CATEGORIES.ADVICE_REQUESTS),
+                  is_money_talk: categories.includes(CATEGORIES.MONEY_TALK),
+                  analyzed_at: new Date().toISOString()
+                });
+
+              if (analysisError) {
+                console.error('Error saving post analysis:', analysisError);
+              }
+            } catch (error) {
+              console.error('Error processing post:', error);
+            }
+
+            // Add a small delay between posts to avoid rate limits
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
         }
+      } catch (error) {
+        console.error('Database operation error:', error);
       }
     }
     
